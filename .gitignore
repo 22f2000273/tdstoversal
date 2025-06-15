@@ -7,8 +7,14 @@ venv/
 *.pyo
 *.pyd
 
-# Environment variables (if any)
+# Environment variables
 .env
 
-# IDE files (if using VSCode)
+# IDE files
 .vscode/
+
+# Log files
+*.log
+
+# Vercel
+.vercel

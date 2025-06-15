@@ -1,0 +1,3 @@
+Press Ctrl + Shift + P
+Python: Enter interpreter path
+/home/dutt/Desktop/virtaul assistant/venv/bin/python

@@ -1,11 +1,11 @@
 # Python cache
 __pycache__/
-
-# Virtual environment
-venv/
 *.pyc
 *.pyo
 *.pyd
+
+# Virtual environment
+venv/
 
 # Environment variables
 .env
@@ -16,5 +16,13 @@ venv/
 # Log files
 *.log
 
-# Vercel
-.vercel
+
+# Database files
+knowledge_base.db
+*.db
+*.sqlite
+*.sqlite3
+
+# System files
+.DS_Store
+Thumbs.db

@@ -3,11 +3,7 @@
   "builds": [
     {
       "src": "app.py",
-      "use": "@vercel/python",
-      "config": {
-        "pythonVersion": "3.11",
-        "installCommand": "pip install --no-cache-dir -r requirements.txt"
-      }
+      "use": "@vercel/python"
     }
   ],
   "routes": [

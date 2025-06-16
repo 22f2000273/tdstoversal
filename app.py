@@ -2,28 +2,20 @@
 import os
 import json
 import sqlite3
+import numpy as np
 import re
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
-from typing import Optional, List
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
 import aiohttp
 import asyncio
 import logging
+import base64
+from fastapi.responses import JSONResponse
 import uvicorn
 import traceback
 from dotenv import load_dotenv
-
-
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-# Constants
-DB_URL ="https://drive.google.com/uc?export=download&id=1UCV7FjmKF6JVKnaZY1-D4D7Wk1xfv4b7"
-# app.py
-
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 DB_PATH = "knowledge_base.db"
-SIMILARITY_THRESHOLD = 0.50  # Lowered threshold for better recall
+SIMILARITY_THRESHOLD = 0.68  # Lowered threshold for better recall
 MAX_RESULTS = 10  # Increased to get more context
 load_dotenv()
 MAX_CONTEXT_CHUNKS = 4  # Increased number of chunks per source
@@ -117,26 +109,78 @@ if not os.path.exists(DB_PATH):
     conn.close()
 
 # Vector similarity calculation with improved handling
-# Replace the existing cosine_similarity function with this:
 def cosine_similarity(vec1, vec2):
     try:
-        # Calculate dot product
-        dot_product = sum(x * y for x, y in zip(vec1, vec2))
-        
-        # Calculate magnitudes
-        mag1 = sum(x ** 2 for x in vec1) ** 0.5
-        mag2 = sum(x ** 2 for x in vec2) ** 0.5
+        # Convert to numpy arrays
+        vec1 = np.array(vec1)
+        vec2 = np.array(vec2)
         
         # Handle zero vectors
-        if mag1 == 0 or mag2 == 0:
+        if np.all(vec1 == 0) or np.all(vec2 == 0):
             return 0.0
             
-        return dot_product / (mag1 * mag2)
+        # Calculate cosine similarity
+        dot_product = np.dot(vec1, vec2)
+        norm_vec1 = np.linalg.norm(vec1)
+        norm_vec2 = np.linalg.norm(vec2)
+        
+        # Avoid division by zero
+        if norm_vec1 == 0 or norm_vec2 == 0:
+            return 0.0
+            
+        return dot_product / (norm_vec1 * norm_vec2)
     except Exception as e:
         logger.error(f"Error in cosine_similarity: {e}")
         logger.error(traceback.format_exc())
-        return 0.0
+        return 0.0  # Return 0 similarity on error rather than crashing
 
+# Function to get embedding from aipipe proxy with retry mechanism
+async def get_embedding(text, max_retries=3):
+    if not API_KEY:
+        error_msg = "API_KEY environment variable not set"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
+    
+    retries = 0
+    while retries < max_retries:
+        try:
+            logger.info(f"Getting embedding for text (length: {len(text)})")
+            # Call the embedding API through aipipe proxy
+            url = "https://aipipe.org/openai/v1/embeddings"
+            headers = {
+                "Authorization": API_KEY,
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "text-embedding-3-small",
+                "input": text
+            }
+            
+            logger.info("Sending request to embedding API")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers, json=payload) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        logger.info("Successfully received embedding")
+                        return result["data"][0]["embedding"]
+                    elif response.status == 429:  # Rate limit error
+                        error_text = await response.text()
+                        logger.warning(f"Rate limit reached, retrying after delay (retry {retries+1}): {error_text}")
+                        await asyncio.sleep(5 * (retries + 1))  # Exponential backoff
+                        retries += 1
+                    else:
+                        error_text = await response.text()
+                        error_msg = f"Error getting embedding (status {response.status}): {error_text}"
+                        logger.error(error_msg)
+                        raise HTTPException(status_code=response.status, detail=error_msg)
+        except Exception as e:
+            error_msg = f"Exception getting embedding (attempt {retries+1}/{max_retries}): {e}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            retries += 1
+            if retries >= max_retries:
+                raise HTTPException(status_code=500, detail=error_msg)
+            await asyncio.sleep(3 * retries)  # Wait before retry
 
 # Function to find similar content in the database with improved logic
 async def find_similar_content(query_embedding, conn):
@@ -343,54 +387,6 @@ async def enrich_with_adjacent_chunks(conn, results):
         logger.error(traceback.format_exc())
         raise
 
-# Function to get embedding from aiproxy with retry mechanism
-async def get_embedding(text, max_retries=3):
-    if not API_KEY:
-        error_msg = "API_KEY environment variable not set"
-        logger.error(error_msg)
-        raise HTTPException(status_code=500, detail=error_msg)
-    
-    retries = 0
-    while retries < max_retries:
-        try:
-            logger.info(f"Getting embedding for text (length: {len(text)})")
-            # Call the embedding API through aiproxy (FIXED URL)
-            url = "https://aiproxy.sanand.workers.dev/openai/v1/embeddings"
-            headers = {
-                "Authorization": f"Bearer {API_KEY}",  # Added Bearer prefix
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": "text-embedding-3-small",
-                "input": text
-            }
-            
-            logger.info("Sending request to embedding API")
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, headers=headers, json=payload) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        logger.info("Successfully received embedding")
-                        return result["data"][0]["embedding"]
-                    elif response.status == 429:  # Rate limit error
-                        error_text = await response.text()
-                        logger.warning(f"Rate limit reached, retrying after delay (retry {retries+1}): {error_text}")
-                        await asyncio.sleep(5 * (retries + 1))  # Exponential backoff
-                        retries += 1
-                    else:
-                        error_text = await response.text()
-                        error_msg = f"Error getting embedding (status {response.status}): {error_text}"
-                        logger.error(error_msg)
-                        raise HTTPException(status_code=response.status, detail=error_msg)
-        except Exception as e:
-            error_msg = f"Exception getting embedding (attempt {retries+1}/{max_retries}): {e}"
-            logger.error(error_msg)
-            logger.error(traceback.format_exc())
-            retries += 1
-            if retries >= max_retries:
-                raise HTTPException(status_code=500, detail=error_msg)
-            await asyncio.sleep(3 * retries)  # Wait before retry
-
 # Function to generate an answer using LLM with improved prompt
 async def generate_answer(question, relevant_results, max_retries=2):
     if not API_KEY:
@@ -429,10 +425,10 @@ async def generate_answer(question, relevant_results, max_retries=2):
             """
             
             logger.info("Sending request to LLM API")
-            # Call OpenAI API through aiproxy (FIXED URL)
-            url = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
+            # Call OpenAI API through aipipe proxy
+            url = "https://aipipe.org/openai/v1/chat/completions"
             headers = {
-                "Authorization": f"Bearer {API_KEY}",  # Added Bearer prefix
+                "Authorization": API_KEY,
                 "Content-Type": "application/json"
             }
             payload = {
@@ -484,9 +480,9 @@ async def process_multimodal_query(question, image_base64):
         
         logger.info("Processing multimodal query with image")
         # Call the GPT-4o Vision API to process the image and question
-        url = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"  # FIXED URL
+        url = "https://aipipe.org/openai/v1/chat/completions"
         headers = {
-            "Authorization": f"Bearer {API_KEY}",  # Added Bearer prefix
+            "Authorization": API_KEY,
             "Content-Type": "application/json"
         }
         
@@ -531,7 +527,6 @@ async def process_multimodal_query(question, image_base64):
         # Fall back to text-only query
         logger.info("Falling back to text-only query due to exception")
         return await get_embedding(question)
-
 
 # Function to parse LLM response and extract answer and sources with improved reliability
 def parse_llm_response(response):
@@ -599,15 +594,6 @@ def parse_llm_response(response):
             "answer": "Error parsing the response from the language model.",
             "links": []
         }
-
-@app.get("/")
-async def root():
-    return {
-        "message": "Hello! The TDS Virtual TA API is running.",
-        "status": "healthy",
-        "info": "Use POST /query to ask questions. Check /health for detailed health status."
-    }
-
 
 # Define API routes
 @app.post("/query")

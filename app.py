@@ -2,7 +2,6 @@
 import os
 import json
 import sqlite3
-import numpy as np
 import re
 import requests
 from fastapi import FastAPI, HTTPException, Request
@@ -135,32 +134,25 @@ if not os.path.exists(DB_PATH):
     conn.close()
 
 # Vector similarity calculation with improved handling
+# Replace the existing cosine_similarity function with this:
 def cosine_similarity(vec1, vec2):
     try:
-        # Convert to numpy arrays
-        vec1 = np.array(vec1)
-        vec2 = np.array(vec2)
+        # Calculate dot product
+        dot_product = sum(x * y for x, y in zip(vec1, vec2))
+        
+        # Calculate magnitudes
+        mag1 = sum(x ** 2 for x in vec1) ** 0.5
+        mag2 = sum(x ** 2 for x in vec2) ** 0.5
         
         # Handle zero vectors
-        if np.all(vec1 == 0) or np.all(vec2 == 0):
+        if mag1 == 0 or mag2 == 0:
             return 0.0
             
-        # Calculate cosine similarity
-        dot_product = np.dot(vec1, vec2)
-        norm_vec1 = np.linalg.norm(vec1)
-        norm_vec2 = np.linalg.norm(vec2)
-        
-        # Avoid division by zero
-        if norm_vec1 == 0 or norm_vec2 == 0:
-            return 0.0
-            
-        return dot_product / (norm_vec1 * norm_vec2)
+        return dot_product / (mag1 * mag2)
     except Exception as e:
         logger.error(f"Error in cosine_similarity: {e}")
         logger.error(traceback.format_exc())
-        return 0.0  # Return 0 similarity on error rather than crashing
-
-# Function to get embedding from aipipe proxy with retry mechanism
+        return 0.0
 
 
 # Function to find similar content in the database with improved logic

@@ -23,23 +23,7 @@ logger = logging.getLogger(__name__)
 # Constants
 DB_URL ="https://drive.google.com/uc?export=download&id=1UCV7FjmKF6JVKnaZY1-D4D7Wk1xfv4b7"
 # app.py
-import os
-import json
-import sqlite3
-import numpy as np
-import re
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Body
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-import aiohttp
-import asyncio
-import logging
-import base64
-from fastapi.responses import JSONResponse
-import uvicorn
-import traceback
-from dotenv import load_dotenv
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

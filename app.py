@@ -617,6 +617,15 @@ def parse_llm_response(response):
             "links": []
         }
 
+@app.get("/")
+async def root():
+    return {
+        "message": "Hello! The TDS Virtual TA API is running.",
+        "status": "healthy",
+        "info": "Use POST /query to ask questions. Check /health for detailed health status."
+    }
+
+
 # Define API routes
 @app.post("/query")
 async def query_knowledge_base(request: QueryRequest):

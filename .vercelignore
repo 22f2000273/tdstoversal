@@ -1,4 +1,3 @@
-# Add these to your existing .vercelignore
 __pycache__/
 *.pyc
 *.pyo
@@ -9,8 +8,7 @@ venv/
 *.egg-info/
 build/
 dist/
-.vscode/              # Exclude VSCode settings
-*.log                 # Exclude log files
-*.md                  # Exclude markdown files except README
-!README.md            # Keep README
-LICENCE               # Exclude if not needed at runtime
+.vscode/
+*.log
+*.md
+LICENCE

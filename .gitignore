@@ -1,28 +1,13 @@
-# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Virtual environment
+.venv
+env/
 venv/
-
-# Environment variables
-.env
-
-# IDE files
+*.egg-info/
+build/
+dist/
 .vscode/
-
-# Log files
 *.log
-
-
-# Database files
-knowledge_base.db
-*.db
-*.sqlite
-*.sqlite3
-
-# System files
-.DS_Store
-Thumbs.db
+*.md

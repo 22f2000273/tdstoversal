@@ -146,7 +146,7 @@ async def get_embedding(text, max_retries=3):
         try:
             logger.info(f"Getting embedding for text (length: {len(text)})")
             # Call the embedding API through aipipe proxy
-            url = "https://aipipe.org/openai/v1/embeddings"
+            url = "https://aiproxy.sanand.workers.dev/openai/v1/embeddings"
             headers = {
                 "Authorization": API_KEY,
                 "Content-Type": "application/json"
@@ -426,7 +426,7 @@ async def generate_answer(question, relevant_results, max_retries=2):
             
             logger.info("Sending request to LLM API")
             # Call OpenAI API through aipipe proxy
-            url = "https://aipipe.org/openai/v1/chat/completions"
+            url = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
             headers = {
                 "Authorization": API_KEY,
                 "Content-Type": "application/json"
@@ -480,7 +480,7 @@ async def process_multimodal_query(question, image_base64):
         
         logger.info("Processing multimodal query with image")
         # Call the GPT-4o Vision API to process the image and question
-        url = "https://aipipe.org/openai/v1/chat/completions"
+        url = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
         headers = {
             "Authorization": API_KEY,
             "Content-Type": "application/json"

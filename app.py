@@ -3,7 +3,6 @@ import os
 import json
 import sqlite3
 import re
-import requests
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse

@@ -7,4 +7,3 @@ beautifulsoup4==4.12.3
 html2text==2020.1.16
 markdown==3.6
 python-multipart==0.0.9
-requests==2.31.0 

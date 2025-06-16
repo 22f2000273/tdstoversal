@@ -13,7 +13,7 @@ import logging
 import uvicorn
 import traceback
 from dotenv import load_dotenv
-import numpy as np
+
 
 
 # Configure logging

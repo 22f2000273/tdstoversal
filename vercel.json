@@ -4,7 +4,7 @@
       "src": "app.py",
       "use": "@vercel/python",
       "config": {
-        "pythonVersion": "3.11"
+        "pythonVersion": "3.12"
       }
     }
   ],
@@ -13,8 +13,5 @@
       "src": "/(.*)",
       "dest": "app.py"
     }
-  ],
-  "env": {
-    "API_KEY": "API_KEY"
-  }
+  ]
 }

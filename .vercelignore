@@ -12,3 +12,9 @@ dist/
 *.log
 *.md
 LICENCE
+*.yaml
+*.yml
+txt.txt
+project-tds-virtual-ta-q1.webp
+scrape_course.py
+scrape_discourse.py
